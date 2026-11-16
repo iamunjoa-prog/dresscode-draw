@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>드레스코드 뽑기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#F4EEE6; --ink:#2A2124; --muted:#8A7F7A; --line:#E2D8CC; --card:#FFFDF9;
+    --burgundy:#7B1E2E; --deepgreen:#1F4D3A; --ivory:#F2EADB;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:440px;margin:0 auto;padding:20px 16px 40px}
+  header{text-align:center;margin-bottom:6px}
+  .eyebrow{font-size:11px;letter-spacing:.24em;color:var(--muted);text-transform:uppercase}
+  h1{font-family:'Gowun Batang',serif;font-size:30px;margin:6px 0 8px;letter-spacing:-.01em}
+  .palette{display:flex;justify-content:center;gap:14px;font-size:13px;color:var(--muted)}
+  .palette span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:12px;height:12px;border-radius:50%;display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+
+  .drum-box{position:relative;display:flex;flex-direction:column;align-items:center;margin:14px 0 4px}
+  canvas{display:block;width:100%;max-width:300px;aspect-ratio:1/1}
+  .stand{width:120px;height:14px;border-radius:0 0 40px 40px;background:#D9CDBF;margin-top:-6px}
+  .stand2{width:180px;height:8px;border-radius:8px;background:#CDBFAF;margin-top:4px}
+  .drum-msg{position:absolute;top:44%;left:0;right:0;text-align:center;color:var(--muted);font-size:14px}
+  .progress{text-align:center;font-size:13px;color:var(--muted);margin:10px 0 18px}
+  .progress b{color:var(--ink)}
+
+  .section-title{font-size:13px;font-weight:700;margin:0 0 10px;color:var(--ink)}
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .chip{position:relative;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 4px;font:inherit;font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;transition:transform .12s,border-color .12s,background .12s}
+  .chip:active{transform:scale(.97)}
+  .chip.sel{border-color:var(--ink);background:var(--ink);color:#fff}
+  .chip.done{color:var(--muted);background:transparent;cursor:default;text-decoration:none}
+  .chip.done .dot{position:absolute;top:6px;right:6px;width:9px;height:9px}
+  .start{width:100%;border:0;border-radius:14px;padding:16px;font:inherit;font-size:17px;font-weight:700;background:var(--burgundy);color:#fff;cursor:pointer;box-shadow:0 6px 16px rgba(123,30,46,.25);transition:opacity .15s,transform .12s}
+  .start:active{transform:scale(.98)}
+  .start:disabled{opacity:.35;box-shadow:none;cursor:default}
+  .mine{margin-top:12px;text-align:center;font-size:13px;color:var(--muted)}
+
+  .board{margin-top:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .col{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 8px 10px;text-align:center}
+  .col-head{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:10px}
+  .col-head .dot{width:22px;height:22px}
+  .col-name{font-size:14px;font-weight:700}
+  .col-count{font-size:11px;color:var(--muted)}
+  .slot{height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-top:6px;border:1px dashed var(--line);color:#C9BDB0}
+  .slot.filled{border:0;background:#F3ECE2;color:var(--ink);font-weight:500;animation:pop .4s ease}
+  .log{margin-top:16px;font-size:12px;color:var(--muted);line-height:1.8}
+  .log div{display:flex;align-items:center;gap:8px}
+
+  .overlay{position:fixed;inset:0;background:rgba(42,33,36,.55);display:none;align-items:center;justify-content:center;padding:24px;z-index:10}
+  .overlay.show{display:flex}
+  .modal{background:var(--card);border-radius:22px;padding:26px 22px 20px;width:100%;max-width:340px;text-align:center;animation:rise .3s ease}
+  .modal p{margin:0 0 6px;color:var(--muted);font-size:14px}
+  .modal h2{font-family:'Gowun Batang',serif;font-size:24px;margin:4px 0 18px}
+  .btns{display:flex;gap:8px}
+  .btn{flex:1;border:0;border-radius:12px;padding:14px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:#EFE7DC;color:var(--ink)}
+  .btn.main{background:var(--ink);color:#fff}
+  .big-ball{width:120px;height:120px;border-radius:50%;margin:8px auto 18px;animation:drop .7s cubic-bezier(.2,1.4,.4,1)}
+  .result-name{font-family:'Gowun Batang',serif;font-size:34px;margin:0}
+  .result-en{font-size:12px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin:4px 0 20px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90%}
+  .toast.show{opacity:1}
+  .demo{margin-top:22px;text-align:center;font-size:11px;color:var(--muted)}
+  .demo button{border:0;background:none;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes rise{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes drop{0%{transform:translateY(-80px) scale(.3);opacity:0}100%{transform:none;opacity:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Dress Code Draw</div>
+    <h1>드레스코드 뽑기</h1>
+    <div class="palette" id="palette"></div>
+  </header>
+
+  <div class="drum-box">
+    <canvas id="drum"></canvas>
+    <div class="stand"></div><div class="stand2"></div>
+    <div class="drum-msg" id="drumMsg">불러오는 중…</div>
+  </div>
+  <div class="progress" id="progress"></div>
+
+  <div id="pickArea">
+    <div class="section-title">내 이름을 골라주세요</div>
+    <div class="chips" id="chips"></div>
+    <button class="start" id="startBtn" disabled>이름을 먼저 골라주세요</button>
+    <div class="mine" id="mine"></div>
+  </div>
+
+  <div class="board" id="board"></div>
+  <div class="log" id="log"></div>
+  <div class="demo" id="demo" hidden>미리보기 모드 · 이 기기에만 저장돼요 · <button id="demoReset">초기화</button></div>
+</div>
+
+<div class="overlay" id="confirmOv">
+  <div class="modal">
+    <p>한 사람당 딱 한 번만 뽑을 수 있어요</p>
+    <h2 id="confirmName"></h2>
+    <div class="btns">
+      <button class="btn ghost" id="cancelBtn">아니에요</button>
+      <button class="btn main" id="okBtn">맞아요, 돌려요!</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="resultOv">
+  <div class="modal">
+    <p id="resultWho"></p>
+    <div class="big-ball" id="bigBall"></div>
+    <div class="result-name" id="resultColor"></div>
+    <div class="result-en" id="resultEn"></div>
+    <div class="btns"><button class="btn main" id="closeResult">결과판 보기</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  // ---------- 데이터 계층: Apps Script면 서버, 아니면 미리보기용 로컬 ----------
+  var DEMO = {
+    names:['지우맘','주아맘','윤이맘','리우맘','이수맘','나윤맘','유나맘','하연맘','도연맘'],
+    colors:[
+      {id:'burgundy',name:'버건디',en:'Burgundy',hex:'#7B1E2E'},
+      {id:'deepgreen',name:'딥그린',en:'Deep Green',hex:'#1F4D3A'},
+      {id:'ivory',name:'아이보리',en:'Ivory',hex:'#F2EADB'}
+    ],
+    per:3
+  };
+  var isGAS = typeof google !== 'undefined' && google.script && google.script.run;
+  var memStore = null;
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+  var mock = {
+    results:function(){ var r = lsGet('dc-demo-results'); if(r) return JSON.parse(r); return memStore || []; },
+    save:function(r){ memStore = r; lsSet('dc-demo-results', JSON.stringify(r)); },
+    state:function(){ return {names:DEMO.names, colors:DEMO.colors, per:DEMO.per, results:mock.results()}; },
+    draw:function(name){
+      var results = mock.results();
+      var ex = results.filter(function(r){return r.name===name;})[0];
+      if(ex) return {already:true, result:ex, state:mock.state()};
+      var pool=[];
+      DEMO.colors.forEach(function(c){
+        var used = results.filter(function(r){return r.color===c.id;}).length;
+        for(var i=0;i<DEMO.per-used;i++) pool.push(c.id);
+      });
+      if(!pool.length) throw new Error('공이 모두 뽑혔어요.');
+      var rec = {name:name, color:pool[Math.floor(Math.random()*pool.length)], order:results.length+1, at:new Date().toISOString()};
+      results.push(rec); mock.save(results);
+      return {already:false, result:rec, state:mock.state()};
+    }
+  };
+  function gas(fn, arg){
+    return new Promise(function(res, rej){
+      google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](arg);
+    });
+  }
+  var api = {
+    getState:function(){ return isGAS ? gas('getState') : Promise.resolve(mock.state()); },
+    draw:function(name){
+      if(isGAS) return gas('draw', name);
+      return new Promise(function(res, rej){ setTimeout(function(){ try{ res(mock.draw(name)); }catch(e){ rej(e); } }, 500); });
+    }
+  };
+
+  // ---------- 상태 ----------
+  var state = null, selected = null, spinning = false, modalOpen = false;
+  var myName = lsGet('dc-my-name');
+  var $ = function(id){ return document.getElementById(id); };
+
+  function colorOf(id){ return state.colors.filter(function(c){return c.id===id;})[0]; }
+  function resultOf(name){ return state.results.filter(function(r){return r.name===name;})[0]; }
+  function ballBg(hex){
+    return 'radial-gradient(circle at 32% 28%, rgba(255,255,255,.85) 0 6%, rgba(255,255,255,.25) 18%, transparent 42%), ' + hex;
+  }
+
+  // ---------- 렌더 ----------
+  function render(){
+    if(!state) return;
+    $('palette').innerHTML = state.colors.map(function(c){
+      return '<span><i class="dot" style="background:'+c.hex+'"></i>'+c.name+'</span>';
+    }).join('');
+
+    var done = state.results.length, total = state.names.length;
+    $('progress').innerHTML = done >= total
+      ? '<b>모두 뽑았어요!</b> 결과판을 확인하세요 🎉'
+      : '<b>'+done+'</b> / '+total+'명 완료 · 통 안에 공 <b>'+(total-done)+'</b>개';
+
+    $('chips').innerHTML = state.names.map(function(n){
+      var r = resultOf(n);
+      if(r){ return '<button class="chip done" disabled>'+n+'<i class="dot" style="background:'+colorOf(r.color).hex+'"></i></button>'; }
+      return '<button class="chip'+(selected===n?' sel':'')+'" data-name="'+n+'">'+n+'</button>';
+    }).join('');
+
+    var btn = $('startBtn');
+    btn.disabled = !selected || spinning;
+    btn.textContent = spinning ? '공이 돌아가는 중…' : (selected ? selected+' 공 돌리기' : '이름을 먼저 골라주세요');
+    $('pickArea').style.display = done >= total ? 'none' : '';
+
+    var mine = myName && resultOf(myName);
+    $('mine').textContent = mine ? '내 드레스코드: '+myName+' → '+colorOf(mine.color).name : '';
+
+    $('board').innerHTML = state.colors.map(function(c){
+      var list = state.results.filter(function(r){return r.color===c.id;});
+      var slots = '';
+      for(var i=0;i<state.per;i++){
+        slots += list[i] ? '<div class="slot filled">'+list[i].name+'</div>' : '<div class="slot">·</div>';
+      }
+      return '<div class="col"><div class="col-head"><i class="dot" style="background:'+ballBg(c.hex)+'"></i>'+
+        '<div class="col-name">'+c.name+'</div><div class="col-count">'+list.length+' / '+state.per+'</div></div>'+slots+'</div>';
+    }).join('');
+
+    $('log').innerHTML = state.results.length ? state.results.slice().sort(function(a,b){return a.order-b.order;}).map(function(r){
+      return '<div><span>'+r.order+'.</span><i class="dot" style="background:'+colorOf(r.color).hex+'"></i><span>'+r.name+' — '+colorOf(r.color).name+'</span></div>';
+    }).join('') : '';
+  }
+
+  // ---------- 공 통(캔버스 물리) ----------
+  var cv = $('drum'), ctx = cv.getContext('2d');
+  var W=300, R=0, cx=0, cy=0, balls=[], spinPower=0;
+  function resize(){
+    var w = cv.clientWidth || 300, dpr = window.devicePixelRatio || 1;
+    cv.width = w*dpr; cv.height = w*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    var ratio = W ? w/W : 1; W = w; R = w*0.46; cx = w/2; cy = w/2;
+    balls.forEach(function(b){ b.x=cx+(b.x-cx)*ratio; b.y=cy+(b.y-cy)*ratio; b.r=R*0.18; });
+  }
+  function addBall(colorId){
+    var a = Math.random()*Math.PI*2, d = Math.random()*R*0.4;
+    balls.push({c:colorId, x:cx+Math.cos(a)*d, y:cy-R*0.3+Math.sin(a)*d*0.5, vx:(Math.random()-.5)*R, vy:0, r:R*0.18});
+  }
+  function syncBalls(){
+    if(!state) return;
+    state.colors.forEach(function(c){
+      var used = state.results.filter(function(r){return r.color===c.id;}).length;
+      var want = Math.max(0, state.per-used);
+      var have = balls.filter(function(b){return b.c===c.id;});
+      for(var i=have.length;i<want;i++) addBall(c.id);
+      for(var j=want;j<have.length;j++) balls.splice(balls.indexOf(have[j]),1);
+    });
+  }
+  function physics(dt){
+    var g = R*7*(1-spinPower), swirl = R*30*spinPower, kick = R*55*spinPower, e = 0.72;
+    for(var i=0;i<balls.length;i++){
+      var b = balls[i], dx=b.x-cx, dy=b.y-cy, d=Math.hypot(dx,dy)||1;
+      b.vy += g*dt;
+      b.vx += (-dy/d)*swirl*dt + (Math.random()-.5)*kick*dt;
+      b.vy += ( dx/d)*swirl*dt + (Math.random()-.5)*kick*dt;
+      var sp = Math.hypot(b.vx,b.vy), max = R*7;
+      if(sp>max){ b.vx*=max/sp; b.vy*=max/sp; }
+      b.vx*=0.998; b.vy*=0.998;
+      b.x+=b.vx*dt; b.y+=b.vy*dt;
+      dx=b.x-cx; dy=b.y-cy; d=Math.hypot(dx,dy)||1;
+      var lim = R-b.r-2;
+      if(d>lim){
+        var nx=dx/d, ny=dy/d; b.x=cx+nx*lim; b.y=cy+ny*lim;
+        var vn=b.vx*nx+b.vy*ny; if(vn>0){ b.vx-=(1+e)*vn*nx; b.vy-=(1+e)*vn*ny; }
+        b.vx*=0.985; b.vy*=0.985;
+      }
+    }
+    for(var p=0;p<balls.length;p++) for(var q=p+1;q<balls.length;q++){
+      var A=balls[p], B=balls[q], ddx=B.x-A.x, ddy=B.y-A.y, dd=Math.hypot(ddx,ddy), mn=A.r+B.r;
+      if(dd<mn && dd>0.001){
+        var ux=ddx/dd, uy=ddy/dd, ov=(mn-dd)/2;
+        A.x-=ux*ov; A.y-=uy*ov; B.x+=ux*ov; B.y+=uy*ov;
+        var rv=(B.vx-A.vx)*ux+(B.vy-A.vy)*uy;
+        if(rv<0){ var im=-(1+e)*rv/2; A.vx-=im*ux; A.vy-=im*uy; B.vx+=im*ux; B.vy+=im*uy; }
+      }
+    }
+  }
+  function drawDrum(t){
+    ctx.clearRect(0,0,W,W);
+    // 유리 통
+    var gl = ctx.createRadialGradient(cx-R*.3, cy-R*.4, R*.1, cx, cy, R);
+    gl.addColorStop(0,'rgba(255,255,255,.95)'); gl.addColorStop(1,'rgba(255,253,249,.55)');
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fillStyle=gl; ctx.fill();
+    ctx.lineWidth=3; ctx.strokeStyle='#D9CDBF'; ctx.stroke();
+    // 회전 표시 링
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.004*spinPower);
+    ctx.setLineDash([4,10]); ctx.lineWidth=1.5; ctx.strokeStyle='rgba(138,127,122,'+(0.15+0.35*spinPower)+')';
+    ctx.beginPath(); ctx.arc(0,0,R-8,0,Math.PI*2); ctx.stroke(); ctx.restore();
+    // 공
+    balls.forEach(function(b){
+      var c = colorOf(b.c);
+      ctx.beginPath(); ctx.arc(b.x+2,b.y+3,b.r,0,Math.PI*2); ctx.fillStyle='rgba(0,0,0,.08)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fillStyle=c.hex; ctx.fill();
+      var hl = ctx.createRadialGradient(b.x-b.r*.35,b.y-b.r*.4,b.r*.05,b.x,b.y,b.r);
+      hl.addColorStop(0,'rgba(255,255,255,.75)'); hl.addColorStop(.35,'rgba(255,255,255,.12)'); hl.addColorStop(1,'rgba(0,0,0,.12)');
+      ctx.fillStyle=hl; ctx.fill();
+      if(b.c==='ivory'){ ctx.lineWidth=1; ctx.strokeStyle='rgba(120,100,80,.25)'; ctx.stroke(); }
+    });
+    // 하이라이트
+    ctx.beginPath(); ctx.ellipse(cx-R*.42, cy-R*.5, R*.14, R*.06, -0.7, 0, Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.7)'; ctx.fill();
+  }
+  var last = 0, target = 0, idleKick = 0;
+  function loop(t){
+    var dt = Math.min(0.033, (t-last)/1000 || 0.016); last = t;
+    spinPower += (target-spinPower)*Math.min(1, dt*3);
+    idleKick -= dt;
+    if(target===0 && idleKick<=0 && balls.length){
+      var b = balls[Math.floor(Math.random()*balls.length)];
+      b.vy -= R*2.2; b.vx += (Math.random()-.5)*R*1.5; idleKick = 0.9 + Math.random()*0.8;
+    }
+    physics(dt/2); physics(dt/2);
+    drawDrum(t);
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- 뽑기 흐름 ----------
+  function toast(msg){
+    var el=$('toast'); el.textContent=msg; el.classList.add('show');
+    clearTimeout(toast.t); toast.t=setTimeout(function(){ el.classList.remove('show'); }, 2600);
+  }
+  function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  function doDraw(name){
+    spinning = true; target = 1; render();
+    var t0 = Date.now();
+    api.draw(name).then(function(res){
+      return wait(Math.max(0, 3200-(Date.now()-t0))).then(function(){ return res; });
+    }).then(function(res){
+      target = 0;
+      state = res.state;
+      // 뽑힌 공 하나를 통에서 꺼냄
+      var idx = -1;
+      for(var i=0;i<balls.length;i++) if(balls[i].c===res.result.color){ idx=i; break; }
+      if(idx>=0 && !res.already) balls.splice(idx,1);
+      syncBalls();
+      myName = name; lsSet('dc-my-name', name);
+      selected = null; spinning = false;
+      showResult(res.result, res.already);
+      render();
+    }).catch(function(err){
+      target = 0; spinning = false; render();
+      toast((err && err.message) || '다시 시도해 주세요');
+      refresh();
+    });
+  }
+  function showResult(r, already){
+    var c = colorOf(r.color);
+    $('resultWho').textContent = already ? r.name+'님은 이미 뽑았어요' : r.name+'님의 드레스코드는';
+    $('bigBall').style.background = ballBg(c.hex);
+    $('bigBall').style.boxShadow = c.id==='ivory' ? 'inset 0 0 0 1px rgba(120,100,80,.25), 0 10px 24px rgba(0,0,0,.12)' : '0 10px 24px rgba(0,0,0,.18)';
+    $('bigBall').style.animation='none'; void $('bigBall').offsetWidth; $('bigBall').style.animation='';
+    $('resultColor').textContent = c.name+'!';
+    $('resultEn').textContent = c.en;
+    $('resultOv').classList.add('show'); modalOpen = true;
+  }
+
+  $('chips').addEventListener('click', function(e){
+    var b = e.target.closest('[data-name]'); if(!b || spinning) return;
+    selected = selected===b.dataset.name ? null : b.dataset.name; render();
+  });
+  $('startBtn').addEventListener('click', function(){
+    if(!selected || spinning) return;
+    $('confirmName').textContent = selected+' 맞으세요?';
+    $('confirmOv').classList.add('show'); modalOpen = true;
+  });
+  $('cancelBtn').addEventListener('click', function(){ $('confirmOv').classList.remove('show'); modalOpen=false; });
+  $('okBtn').addEventListener('click', function(){
+    $('confirmOv').classList.remove('show'); modalOpen=false;
+    if(selected) doDraw(selected);
+  });
+  $('closeResult').addEventListener('click', function(){
+    $('resultOv').classList.remove('show'); modalOpen=false;
+    $('board').scrollIntoView({behavior:'smooth', block:'start'});
+  });
+  $('demoReset').addEventListener('click', function(){
+    lsDel('dc-demo-results'); lsDel('dc-my-name'); memStore=null; myName=null; selected=null; refresh();
+  });
+
+  // ---------- 다른 사람 결과 실시간 반영(폴링) ----------
+  function refresh(){
+    return api.getState().then(function(s){
+      if(spinning) return;
+      state = s; $('drumMsg').textContent=''; syncBalls(); render();
+    }).catch(function(){
+      if(!state) $('drumMsg').textContent='연결이 안 돼요. 잠시 후 새로고침해 주세요';
+    });
+  }
+  setInterval(function(){ if(!spinning && !document.hidden) refresh(); }, 4000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) refresh(); });
+  window.addEventListener('resize', resize);
+
+  if(!isGAS) $('demo').hidden = false;
+  resize();
+  refresh();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
