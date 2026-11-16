@@ -8,7 +8,7 @@
 <style>
   :root{
     --bg:#F4EEE6; --ink:#2A2124; --muted:#8A7F7A; --line:#E2D8CC; --card:#FFFDF9;
-    --burgundy:#7B1E2E; --deepgreen:#1F4D3A; --ivory:#F2EADB;
+    --red:#C8102E; --burgundy:#7B1E2E; --lightpink:#F6C9D2;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif}
@@ -127,9 +127,9 @@
   var DEMO = {
     names:['지우맘','주아맘','윤이맘','리우맘','이수맘','나윤맘','유나맘','하연맘','도연맘'],
     colors:[
+      {id:'red',name:'레드',en:'Red',hex:'#C8102E'},
       {id:'burgundy',name:'버건디',en:'Burgundy',hex:'#7B1E2E'},
-      {id:'deepgreen',name:'딥그린',en:'Deep Green',hex:'#1F4D3A'},
-      {id:'ivory',name:'아이보리',en:'Ivory',hex:'#F2EADB'}
+      {id:'lightpink',name:'연핑크',en:'Light Pink',hex:'#F6C9D2'}
     ],
     per:3
   };
@@ -294,7 +294,7 @@
       var hl = ctx.createRadialGradient(b.x-b.r*.35,b.y-b.r*.4,b.r*.05,b.x,b.y,b.r);
       hl.addColorStop(0,'rgba(255,255,255,.75)'); hl.addColorStop(.35,'rgba(255,255,255,.12)'); hl.addColorStop(1,'rgba(0,0,0,.12)');
       ctx.fillStyle=hl; ctx.fill();
-      if(b.c==='ivory'){ ctx.lineWidth=1; ctx.strokeStyle='rgba(120,100,80,.25)'; ctx.stroke(); }
+      if(b.c==='lightpink'){ ctx.lineWidth=1; ctx.strokeStyle='rgba(120,100,80,.25)'; ctx.stroke(); }
     });
     // 하이라이트
     ctx.beginPath(); ctx.ellipse(cx-R*.42, cy-R*.5, R*.14, R*.06, -0.7, 0, Math.PI*2);
@@ -348,7 +348,7 @@
     var c = colorOf(r.color);
     $('resultWho').textContent = already ? r.name+'님은 이미 뽑았어요' : r.name+'님의 드레스코드는';
     $('bigBall').style.background = ballBg(c.hex);
-    $('bigBall').style.boxShadow = c.id==='ivory' ? 'inset 0 0 0 1px rgba(120,100,80,.25), 0 10px 24px rgba(0,0,0,.12)' : '0 10px 24px rgba(0,0,0,.18)';
+    $('bigBall').style.boxShadow = c.id==='lightpink' ? 'inset 0 0 0 1px rgba(120,100,80,.25), 0 10px 24px rgba(0,0,0,.12)' : '0 10px 24px rgba(0,0,0,.18)';
     $('bigBall').style.animation='none'; void $('bigBall').offsetWidth; $('bigBall').style.animation='';
     $('resultColor').textContent = c.name+'!';
     $('resultEn').textContent = c.en;

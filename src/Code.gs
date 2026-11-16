@@ -1,15 +1,15 @@
 /**
  * 드레스코드 뽑기 — Google Apps Script 서버
  * - 9명 고정 명단, 1인 1회
- * - 버건디/딥그린/아이보리 공이 3개씩(총 9개) 들어있는 통에서 하나씩 뽑음 → 자동으로 3명씩 균등
+ * - 레드/버건디/연핑크 공이 3개씩(총 9개) 들어있는 통에서 하나씩 뽑음 → 자동으로 3명씩 균등
  * - 결과는 스크립트 속성에 저장, 모든 폰이 같은 결과판을 봄
  */
 
 const NAMES = ['지우맘', '주아맘', '윤이맘', '리우맘', '이수맘', '나윤맘', '유나맘', '하연맘', '도연맘'];
 const COLORS = [
+  { id: 'red', name: '레드', en: 'Red', hex: '#C8102E' },
   { id: 'burgundy', name: '버건디', en: 'Burgundy', hex: '#7B1E2E' },
-  { id: 'deepgreen', name: '딥그린', en: 'Deep Green', hex: '#1F4D3A' },
-  { id: 'ivory', name: '아이보리', en: 'Ivory', hex: '#F2EADB' }
+  { id: 'lightpink', name: '연핑크', en: 'Light Pink', hex: '#F6C9D2' }
 ];
 const PER_COLOR = 3;
 const KEY = 'results';
