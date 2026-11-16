@@ -122,35 +122,50 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ---------- Supabase 연결 정보 ----------
+// Supabase 대시보드 → Project Settings → API 에서 복사해요.
+// anon(publishable) 키는 웹페이지에 공개되는 용도라 여기 넣어도 괜찮아요. service_role 키는 절대 넣지 마세요.
+// 둘 다 비워두면 미리보기 모드(이 기기에만 저장)로 돌아가요.
+var SUPABASE_URL = '';
+var SUPABASE_KEY = '';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
 (function(){
-  // ---------- 데이터 계층: Apps Script면 서버, 아니면 미리보기용 로컬 ----------
-  var DEMO = {
+  // ---------- 설정: 명단·색·인원 (supabase/schema.sql 의 dc_draw 함수와 같아야 해요) ----------
+  var CONFIG = {
     names:['지우맘','주아맘','윤이맘','리우맘','이수맘','나윤맘','유나맘','하연맘','도연맘'],
     colors:[
       {id:'red',name:'레드',en:'Red',hex:'#C8102E'},
       {id:'burgundy',name:'버건디',en:'Burgundy',hex:'#7B1E2E'},
-      {id:'lightpink',name:'연핑크',en:'Light Pink',hex:'#F6C9D2'}
+      {id:'lightpink',name:'라이트핑크',en:'Light Pink',hex:'#F6C9D2'}
     ],
     per:3
   };
-  var isGAS = typeof google !== 'undefined' && google.script && google.script.run;
+
+  // ---------- 데이터 계층: Supabase면 서버, 아니면 미리보기용 로컬 ----------
+  var configured = !!(SUPABASE_URL && SUPABASE_KEY);
+  var sb = configured && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  var isLive = !!sb;
   var memStore = null;
   function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
   function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
   function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
+  function withResults(results){ return {names:CONFIG.names, colors:CONFIG.colors, per:CONFIG.per, results:results}; }
+
   var mock = {
     results:function(){ var r = lsGet('dc-demo-results'); if(r) return JSON.parse(r); return memStore || []; },
     save:function(r){ memStore = r; lsSet('dc-demo-results', JSON.stringify(r)); },
-    state:function(){ return {names:DEMO.names, colors:DEMO.colors, per:DEMO.per, results:mock.results()}; },
+    state:function(){ return withResults(mock.results()); },
     draw:function(name){
       var results = mock.results();
       var ex = results.filter(function(r){return r.name===name;})[0];
       if(ex) return {already:true, result:ex, state:mock.state()};
       var pool=[];
-      DEMO.colors.forEach(function(c){
+      CONFIG.colors.forEach(function(c){
         var used = results.filter(function(r){return r.color===c.id;}).length;
-        for(var i=0;i<DEMO.per-used;i++) pool.push(c.id);
+        for(var i=0;i<CONFIG.per-used;i++) pool.push(c.id);
       });
       if(!pool.length) throw new Error('공이 모두 뽑혔어요.');
       var rec = {name:name, color:pool[Math.floor(Math.random()*pool.length)], order:results.length+1, at:new Date().toISOString()};
@@ -158,15 +173,33 @@
       return {already:false, result:rec, state:mock.state()};
     }
   };
-  function gas(fn, arg){
-    return new Promise(function(res, rej){
-      google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](arg);
-    });
+
+  function norm(r){ return {name:r.name, color:r.color, order:r.ord, at:r.at}; }
+  function live(){
+    return {
+      getState:function(){
+        return sb.from('dc_results').select('name,color,ord,at').order('ord').then(function(res){
+          if(res.error) throw res.error;
+          return withResults(res.data.map(norm));
+        });
+      },
+      draw:function(name){
+        return sb.rpc('dc_draw', {p_name:name}).then(function(res){
+          if(res.error) throw new Error(res.error.message);
+          var out = res.data;
+          return live().getState().then(function(s){
+            return {already:out.already, result:norm(out.result), state:s};
+          });
+        });
+      }
+    };
   }
-  var api = {
-    getState:function(){ return isGAS ? gas('getState') : Promise.resolve(mock.state()); },
+  var api = isLive ? live() : {
+    getState:function(){
+      if(configured) return Promise.reject(new Error('연결 준비 중'));
+      return Promise.resolve(mock.state());
+    },
     draw:function(name){
-      if(isGAS) return gas('draw', name);
       return new Promise(function(res, rej){ setTimeout(function(){ try{ res(mock.draw(name)); }catch(e){ rej(e); } }, 500); });
     }
   };
@@ -386,11 +419,17 @@
       if(!state) $('drumMsg').textContent='연결이 안 돼요. 잠시 후 새로고침해 주세요';
     });
   }
-  setInterval(function(){ if(!spinning && !document.hidden) refresh(); }, 4000);
+  // 실시간: 누가 뽑으면 바로 반영. 연결이 끊겨도 주기적으로 한 번씩 다시 확인해요.
+  if(isLive){
+    sb.channel('dc_results')
+      .on('postgres_changes', {event:'*', schema:'public', table:'dc_results'}, function(){ if(!spinning) refresh(); })
+      .subscribe();
+  }
+  setInterval(function(){ if(!spinning && !document.hidden) refresh(); }, isLive ? 10000 : 4000);
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) refresh(); });
   window.addEventListener('resize', resize);
 
-  if(!isGAS) $('demo').hidden = false;
+  if(!configured) $('demo').hidden = false;
   resize();
   refresh();
   requestAnimationFrame(loop);

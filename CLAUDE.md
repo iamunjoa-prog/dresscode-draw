@@ -1,57 +1,45 @@
 # 드레스코드 뽑기 — Claude Code 작업 가이드
 
 동네 엄마 9명이 각자 폰으로 접속해서 드레스코드 색을 뽑는 모바일 웹앱이에요.
-Google Apps Script 웹 앱으로 배포하고, clasp로 로컬 코드를 올려요.
+화면은 GitHub Pages(정적 페이지), 결과 저장은 Supabase(Postgres)로 해요.
 
 ## 구조
 
 ```
-src/
-  Code.gs          서버: 명단·색·인원 설정, 뽑기(LockService로 동시성 처리), 결과 저장(ScriptProperties)
-  Index.html       화면 전체 (CSS + 캔버스 공 물리 + 4초 폴링)
-  appsscript.json  웹 앱 설정 (나로 실행 / 익명 포함 모든 사용자 접근)
+index.html           화면 전체 (CSS + 캔버스 공 물리 + Supabase 연동). GitHub Pages가 main 브랜치 루트에서 바로 서빙해요.
+supabase/schema.sql  Supabase SQL Editor에서 한 번 실행: 결과 테이블, 보안(RLS), 뽑기 함수 dc_draw, 실시간 설정
 ```
 
 ## 규칙
 
-- 명단 9명은 고정이고, 한 사람당 1번만 뽑아요. 이미 뽑은 이름은 잠겨요.
-- 레드·버건디·연핑크 공이 3개씩 9개 들어 있는 통에서 하나씩 꺼내는 방식이에요. 그래서 색마다 3명씩 균등하게 나뉘어요.
-- 결과는 ScriptProperties의 `results` 키에 JSON 배열로 저장돼요: `{name, color, order, at}`
-- 명단, 색, 인원을 바꿀 때는 `Code.gs`의 `NAMES` / `COLORS` / `PER_COLOR`를 고쳐요. 미리보기용으로 `Index.html`의 `DEMO` 객체에도 같은 값이 들어 있어서 둘 다 맞춰야 해요.
-- `Index.html`은 `google.script.run`이 없으면 **미리보기 모드**(localStorage 저장)로 돌아가요. 브라우저에서 파일을 바로 열어서 UI를 확인할 수 있어요.
-- Apps Script HtmlService에서는 `<meta viewport>`가 무시돼요. viewport 설정은 `Code.gs`의 `doGet()`에 있는 `addMetaTag`로 해요.
-- 파일은 `src/Index.html` 하나로 유지해요. HtmlService에서 별도 JS/CSS 파일을 쓰려면 include 패턴이 필요해서예요.
+- 명단 9명은 고정이고, 한 사람당 1번만 뽑아요. `dc_results.name`이 primary key라 DB에서도 보장돼요.
+- 레드·버건디·라이트핑크 공이 3개씩 9개 들어 있는 통에서 하나씩 꺼내는 방식이에요. 그래서 색마다 3명씩 균등하게 나뉘어요.
+- 뽑기는 반드시 `dc_draw(p_name)` RPC로만 해요. `pg_advisory_xact_lock`으로 동시에 눌러도 한 명씩 처리돼요.
+  anon 역할은 테이블을 읽기만 할 수 있고 insert/update/delete 권한이 없어요.
+- 결과 테이블: `dc_results(name, color, ord, at)`. 화면에서는 `ord`를 `order`로 바꿔 써요(`norm()`).
+- 명단, 색, 인원을 바꿀 때는 **두 군데**를 같이 고쳐요:
+  - `index.html`의 `CONFIG` (화면 표시용)
+  - `supabase/schema.sql`의 `dc_draw` 함수 안 `v_names` / `v_colors` / `v_per` → SQL Editor에서 다시 실행
+- `index.html` 맨 위의 `SUPABASE_URL` / `SUPABASE_KEY`가 비어 있으면 **미리보기 모드**(localStorage 저장)로 돌아가요.
+  여기에는 anon(publishable) 키만 넣어요. service_role 키는 절대 넣지 않아요.
+- 실시간 반영은 Supabase Realtime(`postgres_changes`)으로 하고, 10초 폴링을 보조로 둬요.
+- supabase-js는 jsDelivr CDN에서 버전 고정(`@2.45.4`)으로 불러와요.
 
-## 처음 배포
+## 배포
 
-1. https://script.google.com/home/usersettings 에서 **Google Apps Script API를 켜요** (처음 한 번만).
-2. `npm install`
-3. `npx clasp login` (브라우저에서 구글 로그인)
-4. 스크립트를 만들어요 (clasp 버전에 따라 명령이 달라요):
-   - v3: `npx clasp create-script --type standalone --title "드레스코드 뽑기" --rootDir src`
-   - v2: `npx clasp create --type standalone --title "드레스코드 뽑기" --rootDir src`
-   - 그러면 `.clasp.json`이 생기고 `rootDir`이 `src`로 잡혀 있어요.
-5. `npx clasp push -f`
-6. 배포해요:
-   - v3: `npx clasp create-deployment --description "v1"`
-   - v2: `npx clasp deploy --description "v1"`
-7. 웹 앱 URL은 `https://script.google.com/macros/s/<deploymentId>/exec` 형식이에요. 이 링크를 단톡방에 공유하면 돼요.
-   - URL이 권한 오류를 내면 편집기(`npm run open`)에서 `getState`를 한 번 실행해서 권한을 승인하고, 배포 → 배포 관리에서 액세스가 "모든 사용자"인지 확인해요.
-
-## 수정 후 다시 배포 (URL 유지)
-
-새로 배포하면 URL이 바뀌니까, **기존 배포 ID로 업데이트**해요:
-- `npx clasp push -f`
-- 배포 ID 확인: `npm run deployments`
-- v3: `npx clasp update-deployment <deploymentId> --description "v2"`
-- v2: `npx clasp deploy -i <deploymentId> --description "v2"`
+- `main`에 push하면 GitHub Pages가 자동으로 다시 배포해요 (1~2분).
+- 주소: https://iamunjoa-prog.github.io/dresscode-draw/
 
 ## 결과 초기화
 
-공유하기 전에 테스트로 돌렸다면 꼭 초기화해요.
-- 편집기에서 `resetAll`을 실행하거나, `npx clasp run resetAll`을 써요 (clasp run은 추가 설정이 필요해서 편집기 쪽이 쉬워요).
+공유하기 전에 테스트로 돌렸다면 꼭 초기화해요. Supabase SQL Editor에서:
+
+```sql
+truncate public.dc_results;
+```
 
 ## 작업할 때 확인할 것
 
-- UI를 바꾸면 `src/Index.html`을 브라우저에서 열어 미리보기 모드로 9명을 끝까지 뽑아보고, 결과판과 남은 공 개수가 맞는지 확인해요.
+- UI를 바꾸면 `SUPABASE_URL`을 비운 상태로 `index.html`을 브라우저에서 열어 미리보기 모드로 9명을 끝까지 뽑아보고, 결과판과 남은 공 개수가 맞는지 확인해요.
 - 폰 화면(390px 너비) 기준으로 확인해요.
+- SQL을 바꾸면 9명이 동시에 뽑아도 3/3/3으로 나뉘는지, anon이 테이블에 직접 쓸 수 없는지 확인해요.
