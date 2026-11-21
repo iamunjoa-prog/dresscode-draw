@@ -58,8 +58,8 @@
   .plan-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
   .plan-title b{font-size:14px}
   .plan-title span{font-size:11px;color:var(--muted)}
-  .tgrid{display:grid;grid-template-columns:54px repeat(4,1fr);grid-template-rows:auto 46px auto;gap:6px}
-  .tbl{grid-column:2/6;grid-row:2;border-radius:10px;background:linear-gradient(180deg,var(--wood),var(--wood2));box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:.3em;color:rgba(42,33,36,.45)}
+  .tgrid{display:grid;grid-template-columns:repeat(4,1fr) 54px;grid-template-rows:auto 46px auto;gap:6px}
+  .tbl{grid-column:1/5;grid-row:2;border-radius:10px;background:linear-gradient(180deg,var(--wood),var(--wood2));box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:.3em;color:rgba(42,33,36,.45)}
   .seat{min-height:52px;border-radius:10px;border:1px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;color:#C9BDB0;font-size:12px;position:relative}
   .seat .n{font-size:10px;color:var(--muted)}
   .seat .nm{font-size:13px;line-height:1.2}
@@ -67,7 +67,7 @@
   .seat.me{box-shadow:0 0 0 2px var(--ink);background:#fff}
   .seat.flash{animation:flash 1.2s ease 2}
   .seat .dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
-  .seat.head{grid-column:1;grid-row:2}
+  .seat.head{grid-column:5;grid-row:2}
   .log{margin-top:16px;font-size:12px;color:var(--muted);line-height:1.8}
 
   .overlay{position:fixed;inset:0;background:rgba(42,33,36,.55);display:none;align-items:center;justify-content:center;padding:24px;z-index:10}
@@ -155,12 +155,12 @@ var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
 <script>
 (function(){
   // ---------- 설정: 명단·자리 (supabase/seat.sql 의 dc_seat_draw 함수와 같아야 해요) ----------
-  // 긴 테이블: 위쪽 줄 1~4, 아래쪽 줄 5~8, 왼쪽 끝자리 9
+  // 긴 테이블: 위쪽 줄 1~4, 아래쪽 줄 5~8, 오른쪽 끝자리 9 (col = 왼쪽에서 몇 번째)
   var CONFIG = {
     names:['지우맘','주아맘','윤이맘','리우맘','이수맘','나윤맘','유나맘','하연맘','도연맘'],
     seats:[
-      {no:1, side:'top', col:2}, {no:2, side:'top', col:3}, {no:3, side:'top', col:4}, {no:4, side:'top', col:5},
-      {no:5, side:'bottom', col:2}, {no:6, side:'bottom', col:3}, {no:7, side:'bottom', col:4}, {no:8, side:'bottom', col:5},
+      {no:1, side:'top', col:1}, {no:2, side:'top', col:2}, {no:3, side:'top', col:3}, {no:4, side:'top', col:4},
+      {no:5, side:'bottom', col:1}, {no:6, side:'bottom', col:2}, {no:7, side:'bottom', col:3}, {no:8, side:'bottom', col:4},
       {no:9, side:'head'}
     ],
     // 배치도에 드레스코드 색 점을 찍을 때만 써요 (자리 뽑기와는 무관)
@@ -247,17 +247,17 @@ var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
   function whereText(no){
     var s = seatOf(no);
     if(s.side==='head') return '테이블 끝자리';
-    return (s.side==='top' ? '위쪽 줄' : '아래쪽 줄') + ' · 왼쪽에서 ' + (s.col-1) + '번째';
+    return (s.side==='top' ? '위쪽 줄' : '아래쪽 줄') + ' · 왼쪽에서 ' + s.col + '번째';
   }
-  // 옆자리·맞은편 (끝자리는 위아래 줄 맨 왼쪽과 붙어 있어요)
+  // 옆자리·맞은편 (끝자리는 위아래 줄 맨 오른쪽과 붙어 있어요)
   function neighbors(no){
     var s = seatOf(no), out = [];
-    if(s.side==='head') return [1,5];
+    if(s.side==='head') return [4,8];
     CONFIG.seats.forEach(function(o){
       if(o.side===s.side && Math.abs(o.col-s.col)===1) out.push(o.no);
       if(o.side!==s.side && o.side!=='head' && o.col===s.col) out.push(o.no);
     });
-    if(s.col===2) out.push(9);
+    if(s.col===4) out.push(9);
     return out;
   }
   function esc(t){ return String(t).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -309,7 +309,7 @@ var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
   }
 
   function renderPlan(){
-    var mine = myName && byName(myName);
+    var mine = !localMode && myName && byName(myName);
     var html = '';
     CONFIG.seats.forEach(function(s){
       var r = bySeat(s.no);
