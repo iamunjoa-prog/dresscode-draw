@@ -35,6 +35,7 @@ supabase/seat.sql    자리용: dc_seats 테이블, 보안(RLS), 뽑기 함수 d
 - 카드 섞기·고르기 중에는 폴링/실시간 갱신으로 화면을 다시 그리지 않아요(`phase !== 'idle'`).
 - 명단·자리 수를 바꾸면 `seat/index.html`의 `CONFIG`와 `supabase/seat.sql`의 `v_names` / `v_seats`를 같이 고쳐요.
 - 결과 초기화: `truncate public.dc_seats;` (드레스코드 결과와 별개)
+- `seat/?local=1`: Supabase 없이 폰 한 대로 다같이 뽑는 모드(미리보기 모드와 같은 localStorage 저장, '내 자리' 문구 숨김).
 
 ## 배포
 

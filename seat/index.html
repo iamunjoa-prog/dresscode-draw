@@ -168,7 +168,9 @@ var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
   };
 
   // ---------- 데이터 계층: Supabase면 서버, 아니면 미리보기용 로컬 ----------
-  var configured = !!(SUPABASE_URL && SUPABASE_KEY);
+  // 주소 끝에 ?local=1 을 붙이면 서버 없이 이 폰 하나로 다같이 뽑아요
+  var localMode = /[?&]local=1/.test(location.search);
+  var configured = !localMode && !!(SUPABASE_URL && SUPABASE_KEY);
   var sb = configured && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
   var isLive = !!sb;
   var memStore = null;
@@ -423,9 +425,10 @@ var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
     }).catch(function(err){
       if(state) return;
       var msg = (err && (err.message || err.code)) || '';
-      $('progress').textContent = /dc_seats|schema cache|PGRST205|42P01/.test(msg + ' ' + (err && err.code))
-        ? '자리용 설정(seat.sql)이 아직 Supabase에 없어요. SQL Editor에서 실행해 주세요'
-        : '연결이 안 돼요. 잠시 후 새로고침해 주세요' + (msg ? ' ('+msg+')' : '');
+      $('progress').innerHTML = esc(/dc_seats|schema cache|PGRST205|42P01/.test(msg + ' ' + (err && err.code))
+        ? '자리용 설정(seat.sql)이 아직 Supabase에 없어요.'
+        : '연결이 안 돼요. 잠시 후 새로고침해 주세요' + (msg ? ' ('+msg+')' : ''))
+        + '<br><a href="?local=1" style="color:var(--burgundy);font-weight:700">이 폰 하나로 다같이 뽑기 →</a>';
     });
   }
   if(isLive){
@@ -436,7 +439,13 @@ var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
   setInterval(function(){ if(phase==='idle' && !document.hidden) refresh(); }, isLive ? 10000 : 4000);
   document.addEventListener('visibilitychange', function(){ if(!document.hidden && phase==='idle') refresh(); });
 
-  if(!configured) $('demo').hidden = false;
+  if(!configured){
+    $('demo').hidden = false;
+    if(localMode){
+      $('demo').firstChild.textContent = '폰 하나로 다같이 뽑기 · 이 폰에만 저장돼요 · ';
+      $('mine').hidden = true;
+    }
+  }
   refresh();
 })();
 </script>
