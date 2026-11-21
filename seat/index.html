@@ -420,8 +420,12 @@ var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
     return api.getState().then(function(s){
       if(phase!=='idle') return;   // 카드 섞기/고르기 중에는 화면을 건드리지 않아요
       state = s; render();
-    }).catch(function(){
-      if(!state) $('progress').textContent='연결이 안 돼요. 잠시 후 새로고침해 주세요';
+    }).catch(function(err){
+      if(state) return;
+      var msg = (err && (err.message || err.code)) || '';
+      $('progress').textContent = /dc_seats|schema cache|PGRST205|42P01/.test(msg + ' ' + (err && err.code))
+        ? '자리용 설정(seat.sql)이 아직 Supabase에 없어요. SQL Editor에서 실행해 주세요'
+        : '연결이 안 돼요. 잠시 후 새로고침해 주세요' + (msg ? ' ('+msg+')' : '');
     });
   }
   if(isLive){

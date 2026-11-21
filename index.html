@@ -418,8 +418,12 @@ var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
     return api.getState().then(function(s){
       if(spinning) return;
       state = s; $('drumMsg').textContent=''; syncBalls(); render();
-    }).catch(function(){
-      if(!state) $('drumMsg').textContent='연결이 안 돼요. 잠시 후 새로고침해 주세요';
+    }).catch(function(err){
+      if(state) return;
+      var msg = (err && (err.message || err.code)) || '';
+      $('drumMsg').textContent = /dc_results|schema cache|PGRST205|42P01/.test(msg + ' ' + (err && err.code))
+        ? '설정(schema.sql)이 아직 Supabase에 없어요'
+        : '연결이 안 돼요. 잠시 후 새로고침해 주세요' + (msg ? ' ('+msg+')' : '');
     });
   }
   // 실시간: 누가 뽑으면 바로 반영. 연결이 끊겨도 주기적으로 한 번씩 다시 확인해요.
