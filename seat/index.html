@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>자리 뽑기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#F4EEE6; --ink:#2A2124; --muted:#8A7F7A; --line:#E2D8CC; --card:#FFFDF9;
+    --burgundy:#7B1E2E; --wood:#D9C4A8; --wood2:#C9B08F;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:440px;margin:0 auto;padding:20px 16px 40px}
+  header{text-align:center;margin-bottom:10px}
+  .eyebrow{font-size:11px;letter-spacing:.24em;color:var(--muted);text-transform:uppercase}
+  h1{font-family:'Gowun Batang',serif;font-size:30px;margin:6px 0 4px;letter-spacing:-.01em}
+  .sub{font-size:13px;color:var(--muted)}
+  .progress{text-align:center;font-size:13px;color:var(--muted);margin:14px 0 14px}
+  .progress b{color:var(--ink)}
+
+  /* 카드 */
+  .deck{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:300px;margin:0 auto 6px;min-height:60px}
+  .deck-msg{text-align:center;font-size:13px;color:var(--muted);min-height:20px;margin:8px 0 16px}
+  .deck-msg.go{color:var(--burgundy);font-weight:700}
+  .card{aspect-ratio:3/4;perspective:700px;border:0;padding:0;background:none;cursor:default}
+  .card-in{position:relative;width:100%;height:100%;transition:transform .7s cubic-bezier(.3,1.3,.5,1);transform-style:preserve-3d}
+  .card.flip .card-in{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .back{background:var(--burgundy);box-shadow:0 4px 10px rgba(123,30,46,.22);
+    background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.07) 0 6px,transparent 6px 12px);border:3px solid #FFFDF9;outline:1px solid rgba(123,30,46,.35)}
+  .back::after{content:'✦';color:rgba(255,253,249,.75);font-size:20px}
+  .front{background:var(--card);transform:rotateY(180deg);border:1px solid var(--line);box-shadow:0 6px 16px rgba(0,0,0,.12)}
+  .front .no{font-family:'Gowun Batang',serif;font-size:34px;line-height:1}
+  .front .lab{font-size:11px;color:var(--muted);margin-top:4px}
+  .deck.pick .card{cursor:pointer}
+  .deck.pick .card:not(.flip) .card-in{animation:bob 1.2s ease-in-out infinite}
+  .deck.pick .card:nth-child(3n+2) .card-in{animation-delay:.2s}
+  .deck.pick .card:nth-child(3n) .card-in{animation-delay:.4s}
+  .deck.dim .card{opacity:.55}
+  .card.chosen:not(.flip) .card-in{animation:wiggle .35s ease-in-out infinite}
+
+  .section-title{font-size:13px;font-weight:700;margin:0 0 10px;color:var(--ink)}
+  .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .chip{position:relative;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 4px;font:inherit;font-size:15px;font-weight:500;color:var(--ink);cursor:pointer;transition:transform .12s,border-color .12s,background .12s}
+  .chip:active{transform:scale(.97)}
+  .chip.sel{border-color:var(--ink);background:var(--ink);color:#fff}
+  .chip.done{color:var(--muted);background:transparent;cursor:default}
+  .chip.done small{position:absolute;top:4px;right:7px;font-size:10px;color:var(--muted)}
+  .start{width:100%;border:0;border-radius:14px;padding:16px;font:inherit;font-size:17px;font-weight:700;background:var(--burgundy);color:#fff;cursor:pointer;box-shadow:0 6px 16px rgba(123,30,46,.25);transition:opacity .15s,transform .12s}
+  .start:active{transform:scale(.98)}
+  .start:disabled{opacity:.35;box-shadow:none;cursor:default}
+  .mine{margin-top:12px;text-align:center;font-size:13px;color:var(--muted)}
+
+  /* 테이블 배치도 */
+  .plan{margin-top:28px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 12px 14px}
+  .plan-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .plan-title b{font-size:14px}
+  .plan-title span{font-size:11px;color:var(--muted)}
+  .tgrid{display:grid;grid-template-columns:54px repeat(4,1fr);grid-template-rows:auto 46px auto;gap:6px}
+  .tbl{grid-column:2/6;grid-row:2;border-radius:10px;background:linear-gradient(180deg,var(--wood),var(--wood2));box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;font-size:11px;letter-spacing:.3em;color:rgba(42,33,36,.45)}
+  .seat{min-height:52px;border-radius:10px;border:1px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;color:#C9BDB0;font-size:12px;position:relative}
+  .seat .n{font-size:10px;color:var(--muted)}
+  .seat .nm{font-size:13px;line-height:1.2}
+  .seat.filled{border:0;background:#F3ECE2;color:var(--ink);font-weight:500;animation:pop .4s ease}
+  .seat.me{box-shadow:0 0 0 2px var(--ink);background:#fff}
+  .seat.flash{animation:flash 1.2s ease 2}
+  .seat .dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+  .seat.head{grid-column:1;grid-row:2}
+  .log{margin-top:16px;font-size:12px;color:var(--muted);line-height:1.8}
+
+  .overlay{position:fixed;inset:0;background:rgba(42,33,36,.55);display:none;align-items:center;justify-content:center;padding:24px;z-index:10}
+  .overlay.show{display:flex}
+  .modal{background:var(--card);border-radius:22px;padding:26px 22px 20px;width:100%;max-width:340px;text-align:center;animation:rise .3s ease}
+  .modal p{margin:0 0 6px;color:var(--muted);font-size:14px}
+  .modal h2{font-family:'Gowun Batang',serif;font-size:24px;margin:4px 0 18px}
+  .btns{display:flex;gap:8px}
+  .btn{flex:1;border:0;border-radius:12px;padding:14px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:#EFE7DC;color:var(--ink)}
+  .btn.main{background:var(--ink);color:#fff}
+  .result-no{font-family:'Gowun Batang',serif;font-size:56px;line-height:1;margin:10px 0 6px}
+  .result-where{font-size:14px;color:var(--ink);margin:0 0 6px}
+  .result-next{font-size:12px;color:var(--muted);margin:0 0 18px;min-height:18px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20;max-width:90%}
+  .toast.show{opacity:1}
+  .demo{margin-top:22px;text-align:center;font-size:11px;color:var(--muted)}
+  .demo button{border:0;background:none;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer}
+  .nav{margin-top:22px;text-align:center;font-size:13px}
+  .nav a{color:var(--muted)}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes rise{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  @keyframes wiggle{0%,100%{transform:rotate(-3deg) scale(1.04)}50%{transform:rotate(3deg) scale(1.04)}}
+  @keyframes flash{0%,100%{background:#fff}50%{background:#F6E3E6}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Seat Draw</div>
+    <h1>자리 뽑기</h1>
+    <div class="sub">카드를 한 장 뒤집으면 내 자리가 정해져요</div>
+  </header>
+
+  <div class="progress" id="progress">불러오는 중…</div>
+  <div class="deck dim" id="deck"></div>
+  <div class="deck-msg" id="deckMsg"></div>
+
+  <div id="pickArea">
+    <div class="section-title">내 이름을 골라주세요</div>
+    <div class="chips" id="chips"></div>
+    <button class="start" id="startBtn" disabled>이름을 먼저 골라주세요</button>
+    <div class="mine" id="mine"></div>
+  </div>
+
+  <div class="plan" id="plan">
+    <div class="plan-title"><b>자리 배치도</b><span id="planNote"></span></div>
+    <div class="tgrid" id="tgrid"></div>
+  </div>
+  <div class="log" id="log"></div>
+  <div class="demo" id="demo" hidden>미리보기 모드 · 이 기기에만 저장돼요 · <button id="demoReset">초기화</button></div>
+  <div class="nav"><a href="../">← 드레스코드 뽑기</a></div>
+</div>
+
+<div class="overlay" id="confirmOv">
+  <div class="modal">
+    <p>한 사람당 딱 한 번만 뽑을 수 있어요</p>
+    <h2 id="confirmName"></h2>
+    <div class="btns">
+      <button class="btn ghost" id="cancelBtn">아니에요</button>
+      <button class="btn main" id="okBtn">맞아요, 섞어요!</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="resultOv">
+  <div class="modal">
+    <p id="resultWho"></p>
+    <div class="result-no" id="resultNo"></div>
+    <div class="result-where" id="resultWhere"></div>
+    <div class="result-next" id="resultNext"></div>
+    <div class="btns"><button class="btn main" id="closeResult">배치도 보기</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- Supabase 연결 정보 (드레스코드 페이지와 같은 프로젝트) ----------
+// 둘 다 비워두면 미리보기 모드(이 기기에만 저장)로 돌아가요. service_role 키는 절대 넣지 마세요.
+var SUPABASE_URL = 'https://kqkychnjtmwrznzlehic.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_pG3QN951NJ_ioLEiOT_rAA_rU35YE92';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function(){
+  // ---------- 설정: 명단·자리 (supabase/seat.sql 의 dc_seat_draw 함수와 같아야 해요) ----------
+  // 긴 테이블: 위쪽 줄 1~4, 아래쪽 줄 5~8, 왼쪽 끝자리 9
+  var CONFIG = {
+    names:['지우맘','주아맘','윤이맘','리우맘','이수맘','나윤맘','유나맘','하연맘','도연맘'],
+    seats:[
+      {no:1, side:'top', col:2}, {no:2, side:'top', col:3}, {no:3, side:'top', col:4}, {no:4, side:'top', col:5},
+      {no:5, side:'bottom', col:2}, {no:6, side:'bottom', col:3}, {no:7, side:'bottom', col:4}, {no:8, side:'bottom', col:5},
+      {no:9, side:'head'}
+    ],
+    // 배치도에 드레스코드 색 점을 찍을 때만 써요 (자리 뽑기와는 무관)
+    colors:{red:'#C8102E', burgundy:'#7B1E2E', lightpink:'#F6C9D2'}
+  };
+
+  // ---------- 데이터 계층: Supabase면 서버, 아니면 미리보기용 로컬 ----------
+  var configured = !!(SUPABASE_URL && SUPABASE_KEY);
+  var sb = configured && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  var isLive = !!sb;
+  var memStore = null;
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+  var mock = {
+    results:function(){ var r = lsGet('dc-seat-demo'); if(r) return JSON.parse(r); return memStore || []; },
+    save:function(r){ memStore = r; lsSet('dc-seat-demo', JSON.stringify(r)); },
+    state:function(){
+      var dress = {};
+      try{ (JSON.parse(lsGet('dc-demo-results')) || []).forEach(function(r){ dress[r.name] = r.color; }); }catch(e){}
+      return {results:mock.results(), dress:dress};
+    },
+    draw:function(name){
+      var results = mock.results();
+      var ex = results.filter(function(r){return r.name===name;})[0];
+      if(ex) return {already:true, result:ex, state:mock.state()};
+      var taken = results.map(function(r){return r.seat;});
+      var pool = CONFIG.seats.map(function(s){return s.no;}).filter(function(n){return taken.indexOf(n)<0;});
+      if(!pool.length) throw new Error('자리가 모두 찼어요.');
+      var rec = {name:name, seat:pool[Math.floor(Math.random()*pool.length)], order:results.length+1, at:new Date().toISOString()};
+      results.push(rec); mock.save(results);
+      return {already:false, result:rec, state:mock.state()};
+    }
+  };
+
+  function norm(r){ return {name:r.name, seat:r.seat, order:r.ord, at:r.at}; }
+  function live(){
+    return {
+      getState:function(){
+        return Promise.all([
+          sb.from('dc_seats').select('name,seat,ord,at').order('ord'),
+          sb.from('dc_results').select('name,color')
+        ]).then(function(out){
+          if(out[0].error) throw out[0].error;
+          var dress = {};
+          (out[1].data || []).forEach(function(r){ dress[r.name] = r.color; });
+          return {results:out[0].data.map(norm), dress:dress};
+        });
+      },
+      draw:function(name){
+        return sb.rpc('dc_seat_draw', {p_name:name}).then(function(res){
+          if(res.error) throw new Error(res.error.message);
+          var out = res.data;
+          return live().getState().then(function(s){
+            return {already:out.already, result:norm(out.result), state:s};
+          });
+        });
+      }
+    };
+  }
+  var api = isLive ? live() : {
+    getState:function(){
+      if(configured) return Promise.reject(new Error('연결 준비 중'));
+      return Promise.resolve(mock.state());
+    },
+    draw:function(name){
+      return new Promise(function(res, rej){ setTimeout(function(){ try{ res(mock.draw(name)); }catch(e){ rej(e); } }, 400); });
+    }
+  };
+
+  // ---------- 상태 ----------
+  // phase: idle(이름 고르기) → shuffle(카드 섞는 중) → pick(카드 고르기) → reveal(뒤집는 중)
+  var state = null, selected = null, phase = 'idle', drawing = null, flashSeat = null;
+  var myName = lsGet('dc-seat-my-name');
+  var $ = function(id){ return document.getElementById(id); };
+  var total = CONFIG.seats.length;
+
+  function seatOf(no){ return CONFIG.seats.filter(function(s){return s.no===no;})[0]; }
+  function byName(name){ return state.results.filter(function(r){return r.name===name;})[0]; }
+  function bySeat(no){ return state.results.filter(function(r){return r.seat===no;})[0]; }
+  function whereText(no){
+    var s = seatOf(no);
+    if(s.side==='head') return '테이블 끝자리';
+    return (s.side==='top' ? '위쪽 줄' : '아래쪽 줄') + ' · 왼쪽에서 ' + (s.col-1) + '번째';
+  }
+  // 옆자리·맞은편 (끝자리는 위아래 줄 맨 왼쪽과 붙어 있어요)
+  function neighbors(no){
+    var s = seatOf(no), out = [];
+    if(s.side==='head') return [1,5];
+    CONFIG.seats.forEach(function(o){
+      if(o.side===s.side && Math.abs(o.col-s.col)===1) out.push(o.no);
+      if(o.side!==s.side && o.side!=='head' && o.col===s.col) out.push(o.no);
+    });
+    if(s.col===2) out.push(9);
+    return out;
+  }
+  function esc(t){ return String(t).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  // ---------- 렌더 ----------
+  function render(){
+    if(!state) return;
+    var done = state.results.length, left = total - done;
+    $('progress').innerHTML = done >= total
+      ? '<b>모두 앉았어요!</b> 배치도를 확인하세요 🎉'
+      : '<b>'+done+'</b> / '+total+'명 완료 · 남은 카드 <b>'+left+'</b>장';
+
+    if(phase==='idle') renderDeck(left);
+
+    $('chips').innerHTML = CONFIG.names.map(function(n){
+      var r = byName(n);
+      if(r) return '<button class="chip done" disabled>'+esc(n)+'<small>'+r.seat+'번</small></button>';
+      return '<button class="chip'+(selected===n?' sel':'')+'" data-name="'+esc(n)+'">'+esc(n)+'</button>';
+    }).join('');
+
+    var btn = $('startBtn');
+    btn.disabled = !selected || phase!=='idle';
+    btn.textContent = phase==='shuffle' ? '카드 섞는 중…'
+      : (phase==='pick' || phase==='reveal') ? '위에서 카드를 골라주세요'
+      : (selected ? selected+' 카드 섞기' : '이름을 먼저 골라주세요');
+    $('pickArea').style.display = done >= total ? 'none' : '';
+
+    var mine = myName && byName(myName);
+    $('mine').textContent = mine ? '내 자리: '+myName+' → '+mine.seat+'번 ('+whereText(mine.seat)+')' : '';
+
+    renderPlan();
+
+    $('log').innerHTML = state.results.slice().sort(function(a,b){return a.order-b.order;}).map(function(r){
+      return '<div>'+r.order+'. '+esc(r.name)+' — '+r.seat+'번</div>';
+    }).join('');
+  }
+
+  function renderDeck(n){
+    var html = '';
+    for(var i=0;i<n;i++){
+      html += '<button class="card" data-i="'+i+'"><div class="card-in"><div class="face back"></div><div class="face front"><div class="no"></div><div class="lab">번 자리</div></div></div></button>';
+    }
+    $('deck').innerHTML = html;
+    $('deck').className = 'deck' + (phase==='idle' ? ' dim' : '');
+    $('deck').style.display = n ? '' : 'none';
+    $('deckMsg').style.display = n ? '' : 'none';
+    $('deckMsg').className = 'deck-msg';
+    $('deckMsg').textContent = n ? '이름을 고르고 카드를 섞어주세요' : '';
+  }
+
+  function renderPlan(){
+    var mine = myName && byName(myName);
+    var html = '';
+    CONFIG.seats.forEach(function(s){
+      var r = bySeat(s.no);
+      var cls = 'seat' + (r ? ' filled' : '') + (s.side==='head' ? ' head' : '') + (mine && mine.seat===s.no ? ' me' : '') + (flashSeat===s.no ? ' flash' : '');
+      var pos = s.side==='head' ? '' : 'grid-column:'+s.col+';grid-row:'+(s.side==='top'?1:3)+';';
+      var dot = r && state.dress[r.name] && CONFIG.colors[state.dress[r.name]] ? '<i class="dot" style="background:'+CONFIG.colors[state.dress[r.name]]+'"></i>' : '';
+      html += '<div class="'+cls+'" style="'+pos+'"><span class="n">'+s.no+'</span><span class="nm">'+(r ? esc(r.name) : '·')+'</span>'+dot+'</div>';
+    });
+    html += '<div class="tbl">TABLE</div>';
+    $('tgrid').innerHTML = html;
+    var hasDress = Object.keys(state.dress).length > 0;
+    $('planNote').textContent = hasDress ? '점은 드레스코드 색이에요' : '';
+  }
+
+  // ---------- 뽑기 흐름 ----------
+  function toast(msg){
+    var el=$('toast'); el.textContent=msg; el.classList.add('show');
+    clearTimeout(toast.t); toast.t=setTimeout(function(){ el.classList.remove('show'); }, 2600);
+  }
+  function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  function shuffleCards(){
+    phase = 'shuffle'; drawing = selected; render();
+    var left = total - state.results.length;
+    renderDeck(left);
+    $('deck').className = 'deck';
+    $('deckMsg').textContent = '카드를 섞고 있어요…';
+    var cards = [].slice.call($('deck').children);
+    var anims = cards.map(function(c){
+      var frames = [{transform:'none'}];
+      for(var k=0;k<4;k++){
+        frames.push({transform:'translate('+((Math.random()-.5)*120)+'px,'+((Math.random()-.5)*90)+'px) rotate('+((Math.random()-.5)*40)+'deg)'});
+      }
+      frames.push({transform:'none'});
+      return c.animate ? c.animate(frames, {duration:1500, easing:'ease-in-out'}) : null;
+    });
+    wait(1550).then(function(){
+      anims.forEach(function(a){ if(a) a.cancel(); });
+      phase = 'pick'; render();
+      $('deck').className = 'deck pick';
+      $('deckMsg').className = 'deck-msg go';
+      $('deckMsg').textContent = drawing+'님, 마음에 드는 카드 한 장을 골라주세요!';
+    });
+  }
+
+  function pickCard(card){
+    phase = 'reveal'; render();
+    $('deck').className = 'deck';
+    card.classList.add('chosen');
+    $('deckMsg').textContent = '두근두근…';
+    var name = drawing, t0 = Date.now();
+    api.draw(name).then(function(res){
+      return wait(Math.max(0, 900-(Date.now()-t0))).then(function(){ return res; });
+    }).then(function(res){
+      card.querySelector('.no').textContent = res.result.seat;
+      card.classList.remove('chosen'); card.classList.add('flip');
+      $('deckMsg').textContent = res.result.seat+'번 자리!';
+      state = res.state;
+      myName = name; lsSet('dc-seat-my-name', name);
+      return wait(1300).then(function(){ return res; });
+    }).then(function(res){
+      selected = null; drawing = null; phase = 'idle'; flashSeat = res.result.seat;
+      showResult(res.result, res.already);
+      render();
+    }).catch(function(err){
+      selected = null; drawing = null; phase = 'idle';
+      toast((err && err.message) || '다시 시도해 주세요');
+      refresh();
+    });
+  }
+
+  function showResult(r, already){
+    $('resultWho').textContent = already ? r.name+'님은 이미 뽑았어요' : r.name+'님의 자리는';
+    $('resultNo').textContent = r.seat+'번';
+    $('resultWhere').textContent = whereText(r.seat);
+    var next = neighbors(r.seat).map(function(no){ var o = bySeat(no); return o ? o.name : null; }).filter(Boolean);
+    $('resultNext').textContent = next.length ? '지금까지 내 주변: '+next.join(', ') : '주변 자리는 아직 비어 있어요';
+    $('resultOv').classList.add('show');
+  }
+
+  $('chips').addEventListener('click', function(e){
+    var b = e.target.closest('[data-name]'); if(!b || phase!=='idle') return;
+    selected = selected===b.dataset.name ? null : b.dataset.name; render();
+  });
+  $('startBtn').addEventListener('click', function(){
+    if(!selected || phase!=='idle') return;
+    $('confirmName').textContent = selected+' 맞으세요?';
+    $('confirmOv').classList.add('show');
+  });
+  $('cancelBtn').addEventListener('click', function(){ $('confirmOv').classList.remove('show'); });
+  $('okBtn').addEventListener('click', function(){
+    $('confirmOv').classList.remove('show');
+    if(selected && phase==='idle') shuffleCards();
+  });
+  $('deck').addEventListener('click', function(e){
+    var c = e.target.closest('.card'); if(!c || phase!=='pick') return;
+    pickCard(c);
+  });
+  $('closeResult').addEventListener('click', function(){
+    $('resultOv').classList.remove('show');
+    $('plan').scrollIntoView({behavior:'smooth', block:'start'});
+    setTimeout(function(){ flashSeat = null; }, 2500);
+  });
+  $('demoReset').addEventListener('click', function(){
+    lsDel('dc-seat-demo'); lsDel('dc-seat-my-name'); memStore=null; myName=null; selected=null; phase='idle'; refresh();
+  });
+
+  // ---------- 다른 사람 결과 실시간 반영 ----------
+  function refresh(){
+    return api.getState().then(function(s){
+      if(phase!=='idle') return;   // 카드 섞기/고르기 중에는 화면을 건드리지 않아요
+      state = s; render();
+    }).catch(function(){
+      if(!state) $('progress').textContent='연결이 안 돼요. 잠시 후 새로고침해 주세요';
+    });
+  }
+  if(isLive){
+    sb.channel('dc_seats')
+      .on('postgres_changes', {event:'*', schema:'public', table:'dc_seats'}, function(){ if(phase==='idle') refresh(); })
+      .subscribe();
+  }
+  setInterval(function(){ if(phase==='idle' && !document.hidden) refresh(); }, isLive ? 10000 : 4000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && phase==='idle') refresh(); });
+
+  if(!configured) $('demo').hidden = false;
+  refresh();
+})();
+</script>
+</body>
+</html>

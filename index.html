@@ -67,6 +67,8 @@
   .toast.show{opacity:1}
   .demo{margin-top:22px;text-align:center;font-size:11px;color:var(--muted)}
   .demo button{border:0;background:none;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer}
+  .nav{margin-top:22px;text-align:center;font-size:13px}
+  .nav a{color:var(--muted)}
   @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
   @keyframes rise{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
   @keyframes drop{0%{transform:translateY(-80px) scale(.3);opacity:0}100%{transform:none;opacity:1}}
@@ -97,6 +99,7 @@
   <div class="board" id="board"></div>
   <div class="log" id="log"></div>
   <div class="demo" id="demo" hidden>미리보기 모드 · 이 기기에만 저장돼요 · <button id="demoReset">초기화</button></div>
+  <div class="nav"><a href="seat/">자리 뽑기 →</a></div>
 </div>
 
 <div class="overlay" id="confirmOv">
